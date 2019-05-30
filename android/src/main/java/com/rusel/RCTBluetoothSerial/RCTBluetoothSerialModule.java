@@ -2,6 +2,7 @@ package com.rusel.RCTBluetoothSerial;
 
 import java.lang.reflect.Method;
 import java.util.Set;
+import java.nio.charset.StandardCharsets;
 import javax.annotation.Nullable;
 
 import android.app.Activity;
@@ -476,18 +477,23 @@ public class RCTBluetoothSerialModule extends ReactContextBaseJavaModule impleme
      * @param data Message
      */
     void onData (String data) {
+      try {
         mBuffer.append(data);
         String completeData = readUntil(this.delimiter);
         if (completeData != null && completeData.length() > 0) {
-            WritableMap params = Arguments.createMap();
-            WritableArray data = Arguments.createArray();
-            byte[] completeDataBytes =completeData.getBytes("US-ASCII");
-            for (byte dataByte : completeDataBytes) {
-              data.pushInt(dataByte & 0xff);
-            }
-            params.putArray("data", data);
-            sendEvent(DEVICE_READ, params);
+          WritableMap params = Arguments.createMap();
+          WritableArray dataArray = Arguments.createArray();
+          byte[] completeDataBytes = completeData.getBytes(StandardCharsets.UTF_8);
+          for (int i = 0; i < completeData.length(); i++) {
+            dataArray.pushInt((int)completeData.charAt(i) & 0xff);
+          }
+          params.putArray("data", dataArray);
+          sendEvent(DEVICE_READ, params);
         }
+      } catch(Exception e) {
+        Log.e(TAG, "Cannot read Data", e);
+        onError(e);
+      }
     }
 
     private String readUntil(String delimiter) {
